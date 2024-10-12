@@ -1,0 +1,23 @@
+trigger:
+  branches:
+    include:
+    - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- task: Kubernetes@1
+  inputs:
+    connectionType: 'Azure Resource Manager'
+    azureSubscription: '<AzureServiceConnection>'
+    azureResourceGroup: '<YourResourceGroup>'
+    kubernetesCluster: '<YourAKSCluster>'
+    namespace: 'default'
+    command: 'apply'
+    useConfigurationFile: true
+    configuration: |
+      deployment.yaml
+      service.yaml
+      hpa.yaml
+      ingress.yaml
