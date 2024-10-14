@@ -10,7 +10,7 @@ pool:
 steps:
 - task: DownloadSecureFile@1
   inputs:
-    secureFile: 'kubeconfig.yaml'  # Name of your uploaded kubeConfig file
+    secureFile: 'kubeconfig.yaml' # Name of your uploaded kubeConfig file
 
 - script: |
     echo "Current working directory:"
@@ -22,38 +22,39 @@ steps:
 - task: Kubernetes@1
   inputs:
     connectionType: 'Kubernetes Service Connection'
-    kubernetesServiceEndpoint: 'azure-k8s-connection-kubeconfig'  # Use your actual service connection name
+    kubernetesServiceEndpoint: 'azure-k8s-connection-kubeconfig' # Use your actual service connection name
     namespace: 'default'
     command: 'apply'
     useConfigurationFile: true
     configuration: |
-        $(System.DefaultWorkingDirectory)/k8s/deployment.yaml
-   
-- task: Kubernetes@1
-  inputs:
-    connectionType: 'Kubernetes Service Connection'
-    kubernetesServiceEndpoint: 'azure-k8s-connection-kubeconfig'  # Use your actual service connection name
-    namespace: 'default'
-    command: 'apply'
-    useConfigurationFile: true
-    configuration: |
-        $(System.DefaultWorkingDirectory)/k8s/service.yaml
+      $(System.DefaultWorkingDirectory)/k8s/deployment.yaml
 
 - task: Kubernetes@1
   inputs:
     connectionType: 'Kubernetes Service Connection'
-    kubernetesServiceEndpoint: 'azure-k8s-connection-kubeconfig'  # Use your actual service connection name
+    kubernetesServiceEndpoint: 'azure-k8s-connection-kubeconfig' # Use your actual service connection name
     namespace: 'default'
     command: 'apply'
     useConfigurationFile: true
     configuration: |
-        $(System.DefaultWorkingDirectory)/k8s/ingress.yaml
+      $(System.DefaultWorkingDirectory)/k8s/service.yaml
 
 - task: Kubernetes@1
   inputs:
     connectionType: 'Kubernetes Service Connection'
-    kubernetesServiceEndpoint: 'azure-k8s-connection-kubeconfig'  # Use your actual service connection name
+    kubernetesServiceEndpoint: 'azure-k8s-connection-kubeconfig' # Use your actual service connection name
     namespace: 'default'
     command: 'apply'
     useConfigurationFile: true
     configuration: |
+      $(System.DefaultWorkingDirectory)/k8s/ingress.yaml
+
+- task: Kubernetes@1
+  inputs:
+    connectionType: 'Kubernetes Service Connection'
+    kubernetesServiceEndpoint: 'azure-k8s-connection-kubeconfig' # Use your actual service connection name
+    namespace: 'default'
+    command: 'apply'
+    useConfigurationFile: true
+    configuration: |
+      $(System.DefaultWorkingDirectory)/k8s/hpa.yaml
