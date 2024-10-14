@@ -1,0 +1,77 @@
+# azure-pipelines.yml
+trigger:
+- main
+
+resources:
+  pipelines:
+  - pipeline: build
+    source: azure-pipelines-build
+    trigger: 
+      - main
+  - pipeline: deploy
+    source: azure-pipelines-deploy
+    trigger: none
+
+stages:
+- stage: Build
+  displayName: 'Run Build Pipeline'
+  jobs:
+  - job: TriggerBuildPipeline
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: TriggerPipeline@1
+      inputs:
+        buildDefinition: 'azure-pipelines-build'
+        buildParameters: '{"DEPLOY_ENABLED": "false"}'
+        waitForQueuedBuildsToFinish: true
+
+- stage: Deploy
+  displayName: 'Run Deploy Pipeline'
+  condition: succeeded('Build')
+  jobs:
+  - job: TriggerDeployPipeline
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: TriggerPipeline@1
+      inputs:
+        buildDefinition: 'azure-pipelines-deploy'
+        buildParameters: '{"BUILD_ID": "$(resources.pipeline.build.runID)"}'
+        waitForQueuedBuildsToFinish: true
+--------------------------------------------------------------------------------
+# azure-pipelines.yml
+trigger:
+- main
+
+variables:
+  buildPipelineName: 'azure-pipelines-build'
+  deployPipelineName: 'azure-pipelines-deploy'
+
+stages:
+- stage: Build
+  jobs:
+  - job: TriggerBuildPipeline
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: TriggerPipeline@1
+      inputs:
+        buildDefinition: '$(buildPipelineName)'
+        waitForQueuedBuildsToFinish: true
+        buildParameters: '{"DEPLOY_ENABLED": "false"}'
+      name: BuildPipeline
+
+- stage: Deploy
+  dependsOn: Build
+  condition: and(succeeded(), eq(dependencies.Build.outputs['TriggerBuildPipeline.BuildPipeline.result'], 'succeeded'))
+  jobs:
+  - job: TriggerDeployPipeline
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: TriggerPipeline@1
+      inputs:
+        buildDefinition: '$(deployPipelineName)'
+        waitForQueuedBuildsToFinish: true
+        buildParameters: '{"BUILD_ID": "$(BuildPipeline.BuildId)"}'

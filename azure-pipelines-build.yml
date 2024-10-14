@@ -1,5 +1,4 @@
-trigger:
-- main
+# azure-pipelines-build.yml
 
 resources:
 - repo: self
