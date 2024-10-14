@@ -1,0 +1,76 @@
+trigger:
+- main
+
+resources:
+- repo: self
+
+variables:
+  dockerHubServiceConnection: docker-hub-connection
+  imageRepository: jmuachifi/webappdemo-aks
+  dockerfilePath: '**/Dockerfile'
+  tag: $(Build.BuildId)
+  latestTag: latest
+
+stages:
+- stage: Build
+  displayName: Build and push stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: Docker@2
+      inputs:
+        containerRegistry: $(dockerHubServiceConnection)
+        repository: $(imageRepository)
+        command: buildAndPush
+        Dockerfile: $(dockerfilePath)
+        tags: |
+          $(tag)
+          $(latestTag)
+
+- stage: Deploy
+  displayName: Deploy to AKS
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: Deploy
+    displayName: Deploy to AKS
+    environment: production
+    pool:
+      vmImage: ubuntu-latest
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadSecureFile@1
+            inputs:
+              secureFile: kubeconfig.yaml
+
+          - script: |
+              echo "Current working directory:"
+              pwd
+              echo "Listing files in the working directory:"
+              ls -R
+            displayName: List files
+
+          - script: |
+              echo "Contents of k8s folder (if exists):"
+              ls -R k8s || echo "k8s folder not found"
+            displayName: List k8s folder contents
+
+          - task: Kubernetes@1
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceEndpoint: 'azure-k8s-connection-kubeconfig'
+              namespace: 'webapptoaks'
+              command: 'apply'
+              useConfigurationFile: true
+              configurationType: 'inline'
+              inline: |
+                $(Pipeline.Workspace)/**/deployment.yaml
+                $(Pipeline.Workspace)/**/service.yaml
+                $(Pipeline.Workspace)/**/ingress.yaml
+                $(Pipeline.Workspace)/**/hpa.yaml
+            displayName: 'Apply Kubernetes manifests'
